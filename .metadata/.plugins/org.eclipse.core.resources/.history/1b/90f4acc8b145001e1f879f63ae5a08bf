@@ -1,0 +1,17 @@
+package com.pegue.pague.api.service;
+
+import java.util.List;
+import java.util.Optional;
+
+import com.pegue.pague.api.controller.dto.ClienteDto;
+import com.pegue.pague.api.entity.Cliente;
+
+public interface ClienteService {
+	
+	Cliente save(ClienteDto dto);
+	Cliente edit(ClienteDto dtolDto,Long codigo);
+    Optional<ClienteDto> findByIdCliente(Long codigo);
+	List<ClienteDto> findByAllCliente();
+	
+
+}

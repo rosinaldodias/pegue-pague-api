@@ -1,0 +1,288 @@
+package com.pegue.pague.api.service.serviceImpl;
+
+import java.util.Date;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.pegue.pague.api.Repository.ClienteCustomRepository;
+import com.pegue.pague.api.Repository.ClienteRepository;
+import com.pegue.pague.api.Repository.PessoaRepository;
+import com.pegue.pague.api.Repository.TelefoneCustomRepository;
+import com.pegue.pague.api.Repository.TelefoneRepository;
+import com.pegue.pague.api.controller.dto.ClienteDto;
+import com.pegue.pague.api.controller.dto.TelefoneDto;
+import com.pegue.pague.api.entity.Cliente;
+import com.pegue.pague.api.entity.Pessoa;
+import com.pegue.pague.api.entity.Telefone;
+import com.pegue.pague.api.service.ClienteService;
+
+
+
+@Service
+public class ClienteServiceImpl implements ClienteService {
+
+	@Autowired
+	private PessoaRepository repoPessoa;
+	@Autowired
+	private TelefoneRepository repoTel;
+
+	@Autowired
+	private ClienteRepository repoCli;
+
+	@Autowired
+	private ClienteCustomRepository repoCustomCli;
+
+	@Autowired
+	private TelefoneCustomRepository repoCustomTel;
+
+	@Override
+	@Transactional
+	public Cliente save(ClienteDto dto) {
+
+		Pessoa pessoa = new Pessoa();
+		Cliente cliente = new Cliente();
+		String cpfcnpj = dto.getCpfCnpj();
+		cpfcnpj = cpfcnpj.replace(".", "");
+		cpfcnpj = cpfcnpj.replace("-", "");
+
+		pessoa.setCpfCnpj(cpfcnpj);
+		pessoa.setEmail(dto.getEmail());
+		pessoa.setNome(dto.getNome().trim());
+		pessoa.setCliente("S");
+		pessoa.setTipoPessoa(dto.getTipoPessoa());
+		cliente.setPessoa(pessoa);
+		cliente.setAtivo(true);
+		cliente.setDataCadastro(new Date());
+		repoPessoa.save(pessoa);
+
+		if (!dto.getTelefones().isEmpty()) {
+			List<Telefone> telefones = telefoneForDto(pessoa, dto.getTelefones());
+			repoTel.saveAll(telefones);
+
+		}
+
+		repoCli.save(cliente);
+		return cliente;
+	}
+
+	@Override
+	public List<ClienteDto> findByAllCliente() {
+		return repoCustomCli.findByAllCliente().stream().map(this::convertClienteClienteDto)
+				.collect(Collectors.toList());
+	}
+
+	private List<Telefone> telefoneForDto(Pessoa pessoa, List<TelefoneDto> telDto) {
+		if (telDto.isEmpty()) {
+			return null;
+		}
+
+		return telDto.stream().map(dto -> {
+			Telefone telefones = new Telefone();
+			telefones.setTipoTelefone(dto.getTipoTelefone());
+			telefones.setDdd(dto.getDdd());
+			telefones.setOperadora(dto.getOperadora());
+			telefones.setNumero(dto.getNumero());
+			telefones.setPessoa(pessoa);
+			return telefones;
+
+		}).collect(Collectors.toList());
+	}
+
+//	@Override
+//	public Cliente edit1(ClienteDto dto, Long codigo) {
+//
+//		Cliente clienteDto = repoCustomCli.findByIdCliente(codigo);
+//
+//		String cpfcnpj = dto.getCpfCnpj();
+//		cpfcnpj = cpfcnpj.replace(".", "");
+//		cpfcnpj = cpfcnpj.replace("-", "");
+////		clienteDto.setNome().setNome(dto.getNome());
+////		cliente.getPessoa().setCpfCnpj(cpfcnpj);
+////		cliente.getPessoa().setEmail(dto.getEmail());
+////		cliente.setLimiteCredido(dto.getLimiteCredido());
+//		System.out.println(dto.getTelefones().toArray());
+//		Gson gson = new Gson();
+//		String telDtoStr = gson.toJson(dto.getTelefones());
+//		
+//		
+//		System.out.println(telDtoStr);
+//		GsonBuilder builder = new GsonBuilder();
+//		builder.setPrettyPrinting();
+//		Gson gson1 = builder.create();
+//		Telefone[] telArray = gson1.fromJson(telDtoStr, Telefone[].class);
+////		JsonArray array = gson1.fromJson(telDtoStr, JsonArray.class);
+//		 List<Telefone> telOld =  repoCustomTel.findAllTelefone(codigo);
+//		
+//		 clienteDto.getTelefones().addAll(dto.getTelefones());
+//		Type telefoneListType = new TypeToken<List<Telefone>>() {}.getType();
+//		List<Telefone> telefoneList = new Gson().fromJson(telDtoStr, telefoneListType);
+//		for(Telefone tel : telefoneList) {
+//		    System.out.println(tel.getNumero());
+//		}
+////		Consumer<telefoneList> print = System.out::print;
+//		telefoneList.stream().map(t -> t.getOperadora());
+//		cliente.getPessoa().getTelefones().clear();
+//		cliente.getPessoa().getTelefones().addAll(telefoneList);
+//		
+//		cliente.getPessoa().getTelefones().clear();
+//	//	cliente.getPessoa().getTelefones().addAll(dto.getTelefones() );
+////		telOld.addAll(telefoneList);
+//		repoTel.saveAll(telOld);
+////		telOld.addAll(10, telefoneList);
+////		Telefone
+////		 java.lang.reflect.Type tipoLista = new TypeToken<LinkedList<TelefoneDto>>(){}.getType();
+////	     Collection<? extends Telefone> listaAlunos2 = gson.fromJson(telDtoStr, tipoLista);
+////	     telOld.addAll(listaAlunos2);
+//	     
+////	     cliente.getPessoa().getTelefones().clear();
+////	     cliente.getPessoa().getTelefones().addAll(dto.getTelefones());
+////	     cliente.getPessoa().getTelefones().forEach(c -> c.setPessoa(cliente));
+//	     	
+////	     
+////	     System.out.println(listaAlunos2);
+////		System.out.println(clientes);
+////		for (int i = 0; i < telOld.size(); i++) {
+////			System.out.println(telOld.get(i));
+////
+////		}
+////		
+////		
+////		Iterator it = telOld.iterator();
+////		while(!telOld.isEmpty()) {
+////			
+////			System.out.println(it.next());
+////		}
+////		cliente.getPessoa().getTelefones().clear();
+//		
+////		cliente.getPessoa().getTelefones().addAll(telDtoDtr.asList);
+////		pessoaSalva.getContatos().forEach(c -> c.setPessoa(pessoaSalva));
+//
+////			telDto.stream().map(dto -> {
+////			Telefone telefones = new Telefone();
+////			telefones.setTipoTelefone(dto.getTipoTelefone());
+////			telefones.setDdd(dto.getDdd());
+////			telefones.setOperadora(dto.getOperadora());
+////			telefones.setNumero(dto.getNumero());
+////			telefones.setPessoa(pessoa);
+//		
+//		
+//	//	telOld.add(telDtoStr);
+//		
+//		
+////		for (JsonElement element : array) {
+////			Telefone telDto = gson1.fromJson(element, Telefone.class);
+////			System.out.println(telDto);
+////		}
+////		repoTel.saveAll(telOld);
+//		repoCli.save(cliente);
+//		return cliente;
+//	}
+
+	@Override
+	public Optional<ClienteDto> findByIdCliente(Long codigo) {
+
+		Optional<ClienteDto> cliFind = Optional.ofNullable(repoCustomCli.findByIdCliente(codigo));
+
+//		if (cliFind.getPessoa().getTelefones().isEmpty()) {
+//			 List<TelefoneDto> teldto = repoCustomTel.findByIdTelefone(cliFind.getPessoa().getId_pessoa())
+//					.stream().map(this::convertTelforTelDto)
+//					.collect(Collectors.toList());
+//		}
+
+		return cliFind;
+//		Cliente cli = this.repoCustomCli.findByIdCliente(codigo);
+//		Pessoa pessoaEncontrada = this.repoPessoa.findById(cli.getPessoa().getId_pessoa())
+//				.orElseThrow(()-> new EmptyResultDataAccessException(1));
+//		if (cli.getPessoa()cli.)
+//		return null;
+	}
+
+	private ClienteDto convertClienteClienteDto(Cliente cli) {
+		ClienteDto dto = new ClienteDto();
+		dto.setAtivo(cli.getAtivo());
+		dto.setCpfCnpj(cli.getPessoa().getCpfCnpj());
+		dto.setNome(cli.getPessoa().getNome());
+		return dto;
+	}
+
+	private TelefoneDto convertTelforTelDto(Telefone tel) {
+		TelefoneDto dto = new TelefoneDto();
+		dto.setDdd(tel.getDdd());
+		dto.setNumero(tel.getNumero());
+		dto.setOperadora(tel.getOperadora());
+		dto.setTipoTelefone(tel.getTipoTelefone());
+		return dto;
+	}
+//
+//	private List<Telefone> telefoneEditDto( List<TelefoneDto> dto, Telefone tel) {
+////		if (telDto.isEmpty()) {
+////			return null;
+////		}
+//		return dto.stream().map(telOld2 -> {
+//			List<Telefone> telOld = repoCustomTel.findAllTelefone(codigo)	;
+//
+////			Telefone telefones = (Telefone) repoCustomTel.findAllTelefone(pes.getId_pessoa());
+//
+//			telOld.setDdd(telOld2.getDdd());
+//			return tel;
+//
+//		}).collect(Collectors.toList());
+//
+//	}
+
+//	private TelefoneDto convertDtoTel(Telefone tel, Te ) {
+//		
+//		tel.setDdd(cli.getAtivo());
+//		pes.setCpfCnpj(cli.getPessoa().getCpfCnpj());
+//		pes.setNome(cli.getPessoa().getNome());
+//		return dto; 
+//	}
+// 
+	@Override
+	public Cliente edit(Cliente cliJson, Long codigo) {
+
+		Cliente cli = repoCli.findById(codigo).orElseThrow(() -> new EmptyResultDataAccessException(1));
+
+		String cpfcnpj = cliJson.getPessoa().getCpfCnpj();
+		cpfcnpj = cpfcnpj.replace(".", "");
+		cpfcnpj = cpfcnpj.replace("-", "");
+		cli.getPessoa().setNome(cliJson.getPessoa().getNome());
+		cli.getPessoa().setCpfCnpj(cpfcnpj);
+		cli.getPessoa().setEmail(cliJson.getPessoa().getEmail());
+		cli.setLimiteCredido(cliJson.getLimiteCredido());
+
+		List<Telefone> telOld =  repoCustomTel.findAllTelefone(codigo);	
+		telOld.addAll(cliJson.getPessoa().getTelefones());
+		repoTel.saveAll(telOld);
+
+		repoCli.save(cli);
+		return cli;
+	}
+
+	@Override
+	public Pessoa editar(Pessoa pes, Long codigo) {
+		Pessoa pessoa = repoPessoa.findById(codigo).orElseThrow(() -> new EmptyResultDataAccessException(1));
+		Cliente cli = repoCli.findById(codigo).orElseThrow(() -> new EmptyResultDataAccessException(1));
+		String cpfcnpj = pes.getCpfCnpj();
+		cpfcnpj = cpfcnpj.replace(".", "");
+		cpfcnpj = cpfcnpj.replace("-", "");
+		pessoa.setNome(pes.getNome());
+		pessoa.setCpfCnpj(cpfcnpj);
+		pessoa.setEmail(pes.getEmail());
+		cli.setLimiteCredido(pes.getClienteObject().getLimiteCredido());
+
+		pessoa.getTelefones().forEach(c -> c.setPessoa(pes));
+		
+		repoPessoa.save(pessoa);
+		return pessoa;
+	}
+	
+	
+
+}
